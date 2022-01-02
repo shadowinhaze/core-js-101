@@ -51,9 +51,6 @@ function getCircleCircumference(r) {
  *  10, 0  => 5
  *  -3, 3  => 0
  */
-
-//  assert.equal(tasks.getAverage(Number.MAX_VALUE - 2, Number.MAX_VALUE), Number.MAX_VALUE - 1);
-//  assert.equal(tasks.getAverage(Number.MAX_VALUE, -Number.MAX_VALUE / 2), Number.MAX_VALUE / 4);
 function getAverage(val1, val2) {
   const check = Number.MAX_VALUE;
   if (val1 >= check || val2 >= check) {
