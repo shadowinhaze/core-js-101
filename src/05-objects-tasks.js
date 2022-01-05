@@ -1,3 +1,4 @@
+/* eslint-disable max-len */
 /* ************************************************************************************************
  *                                                                                                *
  * Please read the following tutorial before implementing tasks:                                   *
@@ -20,8 +21,14 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
+function Rectangle(w, h) {
+  return {
+    width: w,
+    height: h,
+    getArea() {
+      return this.width * this.height;
+    },
+  };
 }
 
 
@@ -35,8 +42,8 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify(obj);
 }
 
 
@@ -51,8 +58,8 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  return new proto.constructor(...Object.values(JSON.parse(json)));
 }
 
 
@@ -111,32 +118,163 @@ function fromJSON(/* proto, json */) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  selectObj: {
+    tag: '',
+    id: '',
+    class: '',
+    attr: '',
+    pseudoClass: '',
+    pseudoElement: '',
+    seq: '',
+    prevElem: '',
+  },
+  combo: [],
+  comboSeparators: [],
+  firstMode: true,
+  firstId: false,
+  errors: {
+    order: 'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element',
+    moreThanOne: 'Element, id and pseudo-element should not occur more then one time inside the selector',
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  element(tag) {
+    if (this.selectObj.seq && !this.firstMode) {
+      this.genSelector();
+      this.writeCombo();
+      this.firstMode = true;
+    }
+
+    if (this.firstId) this.genError(this.errors.order);
+    if (this.selectObj.tag && this.firstMode) this.genError(this.errors.moreThanOne);
+
+    this.selectObj.tag = tag;
+    this.selectObj.seq = tag;
+
+    return this;
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  id(_id) {
+    if (this.prevElem) {
+      this.writeCombo();
+    }
+
+    if (this.selectObj.id) this.genError(this.errors.moreThanOne);
+    if (this.selectObj.class || this.selectObj.pseudoElement) this.genError(this.errors.order);
+    if (this.selectObj.tag && this.selectObj.seq.length > this.selectObj.tag.length) this.genError(this.errors.order);
+
+    this.selectObj.id = `#${_id}`;
+    if (this.selectObj.seq === '') this.firstId = true;
+    this.selectObj.seq += `#${_id}`;
+
+    this.firstMode = false;
+
+    return this;
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  class(_class) {
+    if (this.selectObj.attr) throw new Error(this.errors.order);
+    this.selectObj.class = `.${_class}`;
+    this.selectObj.seq += `.${_class}`;
+
+    this.firstMode = false;
+    this.firstId = false;
+
+    return this;
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  attr(_attr) {
+    if (this.selectObj.pseudoClass) this.genError(this.errors.order);
+
+    this.selectObj.attr = `[${_attr}]`;
+    this.selectObj.seq += `[${_attr}]`;
+
+    this.firstMode = false;
+    this.firstId = false;
+
+    return this;
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(_pseudoClass) {
+    if (this.selectObj.pseudoElement) this.genError(this.errors.order);
+    this.selectObj.pseudoClass = `:${_pseudoClass}`;
+    this.selectObj.seq += `:${_pseudoClass}`;
+
+    this.firstMode = false;
+    this.firstId = false;
+
+    return this;
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  pseudoElement(_pseudoElement) {
+    if (this.selectObj.pseudoElement) this.genError(this.errors.moreThanOne);
+    this.selectObj.pseudoElement = `::${_pseudoElement}`;
+    this.selectObj.seq += `::${_pseudoElement}`;
+
+    this.firstMode = false;
+    this.firstId = false;
+
+    return this;
+  },
+
+  cleanSelector() {
+    Object.keys(this.selectObj).forEach((key) => {
+      this.selectObj[key] = '';
+    });
+  },
+
+  genSelector() {
+    const result = this.selectObj.seq;
+    this.cleanSelector();
+    this.selectObj.prevElem = result;
+    return result;
+  },
+
+  writeCombo() {
+    if (this.selectObj.prevElem) {
+      this.combo.push(this.selectObj.prevElem);
+      this.selectObj.prevElem = '';
+    } else {
+      this.combo.push(this.selectObj.seq);
+    }
+  },
+
+  combine(...args) {
+    if (this.selectObj.seq) {
+      this.genSelector();
+      this.writeCombo();
+    }
+    this.comboSeparators.push(args[1]);
+    return this;
+  },
+
+  stringify() {
+    if (this.combo.length > 0) {
+      this.comboSeparators.reverse();
+      const result = this.combo.flatMap((item, index) => {
+        if (index < this.combo.length - 1) {
+          return [item, this.comboSeparators[index]];
+        }
+        return item;
+      }).join(' ');
+      this.comboSeparators = [];
+      this.combo = [];
+      this.firstMode = true;
+      this.firstId = false;
+      return result;
+    }
+    const result = this.genSelector();
+    this.selectObj.prevElem = '';
+    this.firstMode = true;
+    this.firstId = false;
+    return result;
+  },
+
+  genError(message) {
+    this.cleanSelector();
+    this.selectObj.prevElem = '';
+    this.firstMode = true;
+    this.firstId = false;
+    throw new Error(message);
   },
 };
 
