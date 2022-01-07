@@ -106,15 +106,16 @@ function getFastestPromise(array) {
  *
  */
 async function chainPromises(array, action) {
-  const arr = [];
-
-  await array.forEach(async (item) => {
-    arr.push(await item);
-  });
-
-  return new Promise((resolve) => {
-    resolve(arr.reduce(action));
-  });
+  return new Promise((response) => {
+    const arr = [];
+    array.forEach(async (item) => {
+      try {
+        arr.push(await item);
+      // eslint-disable-next-line no-empty
+      } catch (err) {}
+    });
+    response(arr);
+  }).then((_arr) => _arr.reduce(action)).catch();
 }
 
 module.exports = {
